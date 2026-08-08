@@ -6,8 +6,7 @@ import os
 # Allow imports from project root when running via streamlit
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from graph.graph import review_graph
-from graph.state import CodeReviewState
+from tools.api_client import run_review
 
 st.set_page_config(page_title="Code Review Agent", layout="wide")
 
@@ -36,16 +35,13 @@ if run_button:
         st.error(f"Code exceeds maximum length of {settings.max_code_length} characters.")
     else:
         with st.spinner("Running multi-agent review..."):
-            initial_state = CodeReviewState(
-                code=code_input,
-                language=language,
-                filename=filename
-            )
-
-            try:
-                result = review_graph.invoke(initial_state)
-            except Exception as e:
-                st.error(f"Review failed: {str(e)}")
+                try:
+                    result = run_review(code_input, language, filename)
+                    if "error" in result:
+                        st.error(result["error"])
+                        st.stop()
+                except Exception as e:
+                    st.error(f"Review failed: {str(e)}")
                 st.stop()
 
         report = result.get("final_report", {})

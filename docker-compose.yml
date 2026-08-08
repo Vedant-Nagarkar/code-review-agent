@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SANDBOX_URL=http://sandbox:8000
+    depends_on:
+      - sandbox
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8080
+    depends_on:
+      - api
+
+  sandbox:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"

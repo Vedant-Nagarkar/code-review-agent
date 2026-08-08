@@ -48,6 +48,10 @@ Flag for retry ONLY if, within a SINGLE agent's own output:
 
 Do NOT flag for retry just because issues were found — finding issues is the system working correctly.
 Do NOT compare agents against each other. Judge each agent only against its own output.
+Do NOT flag for retry if a previous round already covered the same ground and 
+findings are substantively unchanged — retrying will not improve output that 
+depends only on the code itself, not on agent effort. If the code hasn't 
+changed between rounds, additional retries cannot surface new information.
 
 Respond ONLY with a valid JSON object in this exact format:
 {
@@ -56,10 +60,16 @@ Respond ONLY with a valid JSON object in this exact format:
 }
 
 Do not include any text outside the JSON object."""
-
+    previous_round_feedbacks = [fb for fb in state.feedbacks if fb.round == state.retry_count - 1]
+    previous_round_summary = "\n".join(
+        f"{fb.agent_name}: {len(fb.findings)} findings" for fb in previous_round_feedbacks
+) if previous_round_feedbacks else "N/A (this is the first round)"
     human_prompt = f"""
 Current retry count: {state.retry_count}
 Max retries allowed: {MAX_RETRIES}
+    
+Previous round's findings summary (for comparison):
+{previous_round_summary}
 
 Agent feedback to evaluate:
 {feedback_text}
