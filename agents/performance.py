@@ -1,20 +1,13 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import CodeReviewState, AgentFeedback
 from tools.radon_runner import run_radon
-from dotenv import load_dotenv
-import os
+from core.llm_client import get_llm
+from core.logging_config import log_node
 import json
 
-load_dotenv()
+llm = get_llm()
 
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
-
-
+@log_node("performance")
 def performance_node(state: CodeReviewState) -> dict:
     # Skip if planner didn't select this agent
     if "performance" not in state.agents_to_run:
@@ -100,7 +93,10 @@ Code to review:
         agent_name="performance",
         findings=findings,
         severity=severity,
-        passed=passed
+        passed=passed,
+        round=state.retry_count
+
     )
+
 
     return {"feedbacks": [feedback]}

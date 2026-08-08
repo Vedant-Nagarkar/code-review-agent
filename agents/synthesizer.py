@@ -1,24 +1,19 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import CodeReviewState
 from schemas.report import FinalReport
-from dotenv import load_dotenv
-import os
+from core.llm_client import get_llm
+from core.logging_config import log_node
 import json
 
-load_dotenv()
-
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
+llm = get_llm()
 
 
+@log_node("synthesizer")
 def synthesizer_node(state: CodeReviewState) -> dict:
+    current_round_feedbacks = [fb for fb in state.feedbacks if fb.round == state.retry_count]
     # Build a summary of all agent feedback to synthesize
     feedback_summary = []
-    for fb in state.feedbacks:
+    for fb in current_round_feedbacks:
         feedback_summary.append(
             f"Agent: {fb.agent_name}\n"
             f"Severity: {fb.severity}\n"
@@ -90,11 +85,12 @@ All agent feedback:
         # Build a safe fallback report directly from raw agent feedback,
         # bypassing the LLM entirely. This guarantees the user always gets
         # a usable report even if synthesis fails.
+
         by_category = {}
         highest_severity = "low"
         severity_rank = {"low": 0, "medium": 1, "high": 2}
 
-        for fb in state.feedbacks:
+        for fb in current_round_feedbacks:
             by_category[fb.agent_name] = fb.findings
             if severity_rank.get(fb.severity, 0) > severity_rank.get(highest_severity, 0):
                 highest_severity = fb.severity
@@ -111,4 +107,5 @@ All agent feedback:
             ][:3]
         }
 
+    return {"final_report": final_report_dict}
     return {"final_report": final_report_dict}

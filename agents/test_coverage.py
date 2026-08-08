@@ -1,19 +1,13 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import CodeReviewState, AgentFeedback
-from dotenv import load_dotenv
-import os
+from core.llm_client import get_llm
+from core.logging_config import log_node
 import json
 
-load_dotenv()
-
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
+llm = get_llm()
 
 
+@log_node("test_coverage")
 def test_coverage_node(state: CodeReviewState) -> dict:
     # Skip if planner didn't select this agent
     if "test_coverage" not in state.agents_to_run:
@@ -94,7 +88,10 @@ Note: no existing test file was provided. Base your analysis on what tests SHOUL
         agent_name="test_coverage",
         findings=findings,
         severity=severity,
-        passed=passed
+        passed=passed,
+        round=state.retry_count
+
     )
+
 
     return {"feedbacks": [feedback]}

@@ -8,6 +8,7 @@ class AgentFeedback(BaseModel):
     findings: list[str]
     severity: str  # "low", "medium", "high"
     passed: bool
+    round: int = 0
 
 
 class CodeReviewState(BaseModel):

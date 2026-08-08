@@ -1,25 +1,22 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import CodeReviewState
-from dotenv import load_dotenv
-import os
+from core.llm_client import get_llm
+from core.logging_config import log_node
 import json
 
-load_dotenv()
 
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
+llm = get_llm()
 
 MAX_RETRIES = 2
 
 
+@log_node("critic")
 def critic_node(state: CodeReviewState) -> dict:
+    current_round_feedbacks = [fb for fb in state.feedbacks if fb.round == state.retry_count]
+
     # Build a summary of all agent feedback for the critic to evaluate
     feedback_summary = []
-    for fb in state.feedbacks:
+    for fb in current_round_feedbacks:
         feedback_summary.append(
             f"Agent: {fb.agent_name}\n"
             f"Severity: {fb.severity}\n"
@@ -33,13 +30,24 @@ def critic_node(state: CodeReviewState) -> dict:
 Your job is NOT to review the code itself. Your job is to judge whether the AGENTS did a 
 thorough enough job reviewing it.
 
-Flag for retry ONLY if:
-- An agent's findings list is suspiciously empty for clearly complex or risky code
-- An agent's findings are too vague to be actionable (e.g. "code has issues" with no specifics)
-- There's a contradiction between agents (e.g. security says passed=true but findings list is non-empty)
-- Multiple agents failed to parse (findings mention "failed to parse")
+Each agent only reviews its own domain. Empty findings from one agent are NEVER a problem 
+caused by another agent having findings. Example:
+
+Security: 2 findings, high severity
+Performance: 0 findings, low severity
+Style: 3 findings, high severity
+
+This is CORRECT and should NOT trigger a retry. A short function with no loops or complexity 
+simply has no performance issues to find — that's a valid result, not a failure. Do not 
+reference one agent's findings when judging whether another agent's findings are sufficient.
+
+Flag for retry ONLY if, within a SINGLE agent's own output:
+- That agent's findings list is vague or unactionable (e.g. "code has issues" with no specifics)
+- That agent's passed=true but its own findings list is non-empty (internal contradiction)
+- That agent's findings mention "failed to parse"
 
 Do NOT flag for retry just because issues were found — finding issues is the system working correctly.
+Do NOT compare agents against each other. Judge each agent only against its own output.
 
 Respond ONLY with a valid JSON object in this exact format:
 {
@@ -90,8 +98,10 @@ Agent feedback to evaluate:
     if state.retry_count >= MAX_RETRIES:
         needs_retry = False
 
+    forced_retry = state.retry_count == 0
+
     return {
-        "needs_retry": needs_retry,
+        "needs_retry":  needs_retry ,
         "retry_notes": retry_notes,
         "retry_count": state.retry_count + 1 if needs_retry else state.retry_count
     }

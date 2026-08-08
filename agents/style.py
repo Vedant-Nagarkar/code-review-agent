@@ -1,20 +1,14 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import CodeReviewState, AgentFeedback
 from tools.ast_parser import run_ast_parser
-from dotenv import load_dotenv
-import os
+from core.llm_client import get_llm
+from core.logging_config import log_node
 import json
 
-load_dotenv()
-
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
+llm = get_llm()
 
 
+@log_node("style")
 def style_node(state: CodeReviewState) -> dict:
     # Skip if planner didn't select this agent
     if "style" not in state.agents_to_run:
@@ -101,7 +95,10 @@ Code to review:
         agent_name="style",
         findings=findings,
         severity=severity,
-        passed=passed
+        passed=passed,
+        round=state.retry_count
+
     )
+
 
     return {"feedbacks": [feedback]}

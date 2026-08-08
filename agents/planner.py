@@ -1,16 +1,13 @@
-from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-import os
+from graph.state import CodeReviewState
+from langchain_core.messages import SystemMessage, HumanMessage
+from core.llm_client import get_llm
+from core.logging_config import log_node
+import json
 
-load_dotenv()
-
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0
-)
+llm = get_llm()
 
 
+@log_node("planner")
 def planner_node(state: CodeReviewState) -> dict:
     # If this is a retry, use critic's notes to guide replanning
     retry_context = ""
@@ -77,7 +74,7 @@ Code to review:
         # If parsing fails entirely, default to all agents
         agents = ["security", "performance", "style", "test_coverage"]
 
+
     return {
         "agents_to_run": agents,
-        "feedbacks": []  # Reset feedbacks on each plan (including retries)
     }
