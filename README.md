@@ -150,7 +150,6 @@ Runs the full pipeline against a small golden dataset of known code samples (SQL
 ## Current scope and roadmap
 
 - Supports Python code review end to end; static analysis tools (Bandit, Radon, AST parsing) are Python-specific, so non-Python input relies on LLM judgment alone.
-- The `sandbox/` service can safely execute submitted code but is not yet connected to the review pipeline.
 - Test and evaluation coverage currently focuses on deterministic logic and end-to-end agent accuracy; direct unit tests for individual agent functions are a planned addition.
 
 ## License

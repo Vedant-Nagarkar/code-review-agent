@@ -9,9 +9,6 @@ services:
       - "8080:8080"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - SANDBOX_URL=http://sandbox:8000
-    depends_on:
-      - sandbox
 
   ui:
     build:
@@ -24,9 +21,3 @@ services:
     depends_on:
       - api
 
-  sandbox:
-    build:
-      context: ./sandbox
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
